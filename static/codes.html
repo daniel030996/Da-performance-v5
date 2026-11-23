@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fault codes · DA Performance</title>
+  <style>
+    :root {
+      --bg: #17140f;
+      --bg-raise: #221e17;
+      --ink: #f4efe6;
+      --muted: #b6ab9a;
+      --line: #3c3428;
+      --amber: #f0a202;
+      --amber-dim: rgba(240, 162, 2, 0.14);
+      --red: #e15d45;
+      --green: #8fb573;
+      --blue: #8eb4c8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(900px 420px at 0% -10%, rgba(240, 162, 2, 0.09), transparent 55%),
+        var(--bg);
+      color: var(--ink);
+      font: 16px/1.5 "Segoe UI", "Avenir Next", "Helvetica Neue", sans-serif;
+    }
+    a { color: var(--amber); }
+    a:hover { color: #ffd27a; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 28px 20px 64px; }
+    header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; margin-bottom: 18px; }
+    .brand { display: flex; gap: 12px; align-items: center; }
+    .lamp {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--amber);
+      box-shadow: 0 0 0 4px var(--amber-dim), 0 0 18px var(--amber);
+    }
+    .eyebrow { margin: 0; letter-spacing: 0.14em; text-transform: uppercase; font-size: 11px; color: var(--amber); }
+    h1 { margin: 0; font-size: 32px; font-weight: 650; letter-spacing: -0.03em; }
+    .attrib {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    form {
+      display: grid;
+      grid-template-columns: 1fr 230px auto;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    input, select, button {
+      font: inherit;
+      color: var(--ink);
+      background: var(--bg-raise);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    input:focus, select:focus, button:focus { outline: 2px solid var(--amber); outline-offset: 1px; }
+    button[type="submit"], .chip, .text-btn {
+      cursor: pointer;
+    }
+    button[type="submit"] {
+      background: var(--amber);
+      color: #1a1406;
+      border-color: transparent;
+      font-weight: 700;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; padding: 0; list-style: none; }
+    .chip {
+      background: transparent;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+    .chip:hover { color: var(--ink); border-color: var(--amber); }
+    .banner {
+      border: 1px solid var(--line);
+      background: var(--amber-dim);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 0 0 14px;
+    }
+    .banner p { margin: 0; }
+    .status { color: var(--muted); min-height: 1.4em; }
+    .match-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .match {
+      width: 100%;
+      text-align: left;
+      display: grid;
+      grid-template-columns: 92px 1fr auto;
+      gap: 10px;
+      align-items: baseline;
+    }
+    .match code, .code-title { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+    .match code { color: var(--amber); font-size: 16px; }
+    .match small { color: var(--muted); display: block; }
+    .card {
+      background: var(--bg-raise);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 18px 8px;
+      margin: 0 0 16px;
+    }
+    .card header { align-items: flex-start; margin-bottom: 8px; }
+    .code-title { margin: 0; font-size: 34px; letter-spacing: 0.03em; color: var(--amber); }
+    .kicker { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+    .desc { font-size: 20px; margin: 8px 0 12px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+    .badge {
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+    .badge.serious { color: #fff; background: var(--red); border-color: transparent; }
+    .badge.caution { color: #1a1406; background: var(--amber); border-color: transparent; }
+    .badge.info { color: #14200f; background: var(--green); border-color: transparent; }
+    .badge.warn { color: var(--amber); border-color: var(--amber); }
+    .callouts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+    .callout { border-radius: 12px; padding: 12px 14px; background: #2a241b; }
+    .callout h3, section h3 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .callout p, section p { margin: 0 0 8px; }
+    section { padding: 8px 0 4px; border-top: 1px solid var(--line); }
+    ul { margin: 0 0 8px; padding-left: 18px; }
+    li { margin: 0 0 4px; }
+    .source-line { color: var(--muted); font-size: 13px; }
+    .missing { color: var(--muted); font-size: 14px; }
+    .links { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .links a { overflow-wrap: anywhere; }
+    footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+    footer ul { padding-left: 18px; }
+    @media (max-width: 720px) {
+      form, .callouts, .match { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: flex-start; }
+      h1 { font-size: 28px; }
+      .badges { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <span class="lamp" aria-hidden="true"></span>
+        <div>
+          <p class="eyebrow">DA Performance</p>
+          <h1>Fault codes</h1>
+        </div>
+      </div>
+    </header>
+    <p class="attrib">Code data from OBD Codes List, https://obdcodeslist.com/code-data.html. Manufacturer lists include ODbL and MIT sources. Nothing here was guessed: empty causes or fixes mean no source published them.</p>
+
+    <form id="search-form">
+      <label for="q">Code or keyword</label>
+      <input id="q" name="q" autocomplete="off" placeholder="P0420, PO420, 00532, or catalytic converter" required>
+      <label for="make">Vehicle make</label>
+      <select id="make" name="make">
+        <option value="">Any make</option>
+      </select>
+      <button type="submit">Search</button>
+    </form>
+    <ul class="chips">
+      <li><button type="button" class="chip" data-q="P0300" data-make="">P0300</button></li>
+      <li><button type="button" class="chip" data-q="P0420" data-make="">P0420</button></li>
+      <li><button type="button" class="chip" data-q="P1570" data-make="FORD">Ford P1570</button></li>
+      <li><button type="button" class="chip" data-q="00532" data-make="VW_GROUP">VW 00532</button></li>
+      <li><button type="button" class="chip" data-q="misfire" data-make="">Misfire</button></li>
+    </ul>
+    <p id="status" class="status" role="status"></p>
+    <div id="results"></div>
+
+    <footer>
+      <p><strong>Sources and licences.</strong> Code data from OBD Codes List, https://obdcodeslist.com/code-data.html.</p>
+      <ul>
+        <li><a href="https://obdcodeslist.com/code-data.html">OBD Codes List</a> — free CSV with attribution; per-code pages supply many causes and fixes. Where the collected text says a field is unverified, that is shown on the field.</li>
+        <li><a href="https://github.com/autodiag2/database">autodiag2/database</a> — Open Database License (ODbL-1.0) / DbCL-1.0.</li>
+        <li><a href="https://github.com/Wal33D/dtc-database">Wal33D/dtc-database</a> — MIT. <a href="https://github.com/mytrile/obd-trouble-codes">mytrile/obd-trouble-codes</a> — MIT.</li>
+        <li><a href="https://github.com/brendan-w/python-OBD/blob/master/obd/codes.py">python-OBD codes.py</a> — GPL. <a href="https://github.com/Automotive-9/dtc-codes">Automotive-9/dtc-codes</a> — no licence stated. <a href="https://opendtc.net/brands">OpenDTC</a>. <a href="https://www.carparts.com/blog/">CarParts.com</a>.</li>
+      </ul>
+      <p>Airbag (B) and brake or stability (C) codes should be checked by a qualified mechanic. A flashing check-engine light means stop when it is safe.</p>
+    </footer>
+  </div>
+  <script>
+    const form = document.getElementById("search-form");
+    const qInput = document.getElementById("q");
+    const makeSelect = document.getElementById("make");
+    const results = document.getElementById("results");
+    const statusEl = document.getElementById("status");
+    const FIELD_ORDER = [
+      ["causes", "Likely causes"],
+      ["symptoms", "Symptoms"],
+      ["diagnosis", "Diagnosis steps"],
+      ["fixes", "Fixes"]
+    ];
+
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text != null) node.textContent = text;
+      return node;
+    }
+    function safeUrl(url) {
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol === "http:" || parsed.protocol === "https:") return parsed.href;
+      } catch (err) { /* ignore bad urls */ }
+      return null;
+    }
+    function sourceLine(source, unverified) {
+      if (!source && !unverified) return null;
+      const line = el("p", "source-line");
+      line.append("Source: ");
+      if (source) {
+        const href = safeUrl(source.url);
+        if (href) {
+          const link = el("a", null, source.name || href);
+          link.href = href;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          line.append(link);
+        } else {
+          line.append(source.name || "Source");
+        }
+        if (source.licence) line.append(" · " + source.licence);
+      }
+      if (unverified || (source && source.unverified)) {
+        line.append(" ");
+        line.append(el("span", "badge warn", "Unverified"));
+      }
+      return line;
+    }
+    function badgeForSeverity(text) {
+      const value = (text || "").toLowerCase();
+      if (value.includes("serious")) return ["serious", text];
+      if (value.includes("caution")) return ["caution", text];
+      if (value.includes("info") || value.includes("safe")) return ["info", text];
+      return null;
+    }
+    function renderField(container, label, field) {
+      const section = el("section");
+      section.append(el("h3", null, label));
+      if (!field || !field.available) {
+        section.append(el("p", "missing", "Not available from the collected sources."));
+        container.append(section);
+        return;
+      }
+      if (field.items.length > 1) {
+        const list = el("ul");
+        field.items.forEach((item) => list.append(el("li", null, item)));
+        section.append(list);
+      } else {
+        section.append(el("p", null, field.text));
+      }
+      const src = sourceLine(field.source, field.unverified);
+      if (src) section.append(src);
+      container.append(section);
+    }
+    function renderEntry(entry) {
+      const card = el("article", "card");
+      const head = el("header");
+      const titles = el("div");
+      titles.append(el("h2", "code-title", entry.code));
+      const relation = {
+        generic: "Generic code — the same meaning on every make",
+        selected: "Shown first for the make you chose",
+        related: "Related make list, shown because this make's own list is thin",
+        listed: "Manufacturer definition"
+      }[entry.relation] || "";
+      titles.append(el("p", "kicker", [entry.make_label, entry.system, relation].filter(Boolean).join(" · ")));
+      head.append(titles);
+      const badges = el("div", "badges");
+      badges.append(el("span", "badge", entry.scope === "generic" ? "Generic" : "Manufacturer"));
+      if (entry.warning_lamp) badges.append(el("span", "badge", entry.warning_lamp));
+      if (entry.original_language) badges.append(el("span", "badge warn", "Original language"));
+      if (entry.notes_unverified || (entry.unverified_fields || []).length) badges.append(el("span", "badge warn", "Unverified"));
+      const severity = entry.fields.severity;
+      const sevBadge = severity && severity.available ? badgeForSeverity(severity.text) : null;
+      if (sevBadge) badges.append(el("span", "badge " + sevBadge[0], sevBadge[1]));
+      head.append(badges);
+      card.append(head);
+
+      card.append(el("p", "desc", entry.description));
+      const descSrc = sourceLine(entry.description_source, entry.description_unverified);
+      if (descSrc) card.append(descSrc);
+      if (entry.subsystem) card.append(el("p", "kicker", entry.subsystem));
+      if (entry.make_detail) card.append(el("p", "kicker", "Brands in the source: " + entry.make_detail));
+
+      const callouts = el("div", "callouts");
+      ["severity", "drive_advice"].forEach((key) => {
+        const field = entry.fields[key];
+        const box = el("div", "callout");
+        box.append(el("h3", null, key === "severity" ? "Severity" : "Can I drive?"));
+        box.append(el("p", null, field && field.available ? field.text : "Not available from the collected sources."));
+        const src = field && sourceLine(field.source, field.unverified);
+        if (src) box.append(src);
+        callouts.append(box);
+      });
+      card.append(callouts);
+
+      if (entry.letter === "B" || entry.letter === "C") {
+        card.append(el("p", "banner", entry.letter === "B"
+          ? "Airbag fault. Have a qualified mechanic check it, whatever this list says."
+          : "Brake or stability fault. Have a qualified mechanic check it, whatever this list says."));
+      }
+
+      if (!entry.guidance_available) {
+        card.append(el("p", "missing", "Meaning, causes, symptoms, diagnosis, fixes and severity are not available from the collected sources for this entry. Manufacturer codes are often description-only."));
+      } else {
+        const meaning = entry.fields.meaning;
+        if (meaning.available) renderField(card, "Meaning", meaning);
+        else card.append(el("p", "missing", "Meaning: not available from the collected sources."));
+        FIELD_ORDER.forEach(([key, label]) => renderField(card, label, entry.fields[key]));
+      }
+
+      if (entry.notes) {
+        const notes = el("section");
+        notes.append(el("h3", null, "Notes"));
+        notes.append(el("p", null, entry.notes));
+        if (entry.notes_unverified) notes.append(el("p", "source-line", "The source marked this unverified."));
+        card.append(notes);
+      }
+      if (entry.alt_descriptions && entry.alt_descriptions.length) {
+        const alt = el("section");
+        alt.append(el("h3", null, "Other wordings"));
+        const list = el("ul");
+        entry.alt_descriptions.forEach((item) => {
+          const li = el("li");
+          li.append(item.text || "");
+          if (item.source_name) li.append(" (" + item.source_name + ")");
+          if (item.unverified) li.append(" — unverified");
+          list.append(li);
+        });
+        alt.append(list);
+        card.append(alt);
+      }
+      if (entry.sources && entry.sources.length) {
+        const links = el("section");
+        links.append(el("h3", null, "Source links"));
+        const stack = el("div", "links");
+        entry.sources.forEach((src) => {
+          const href = safeUrl(src.url);
+          if (!href) return;
+          const link = el("a", null, src.name || href);
+          link.href = href;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          stack.append(link);
+        });
+        links.append(stack);
+        card.append(links);
+      }
+      return card;
+    }
+    function renderCode(data) {
+      results.replaceChildren();
+      const asked = (data.query || "").replace(/\s+/g, "");
+      if (data.normalised_code && asked.toUpperCase() !== data.normalised_code) {
+        results.append(el("p", "status", "Read as " + data.normalised_code + "."));
+      }
+      if (data.warning) {
+        const banner = el("div", "banner");
+        banner.append(el("p", null, data.warning));
+        results.append(banner);
+      }
+      if (data.make_missing) results.append(el("p", "banner", data.make_missing));
+      if (data.message) {
+        const banner = el("div", "banner");
+        banner.append(el("p", null, data.message));
+        if (data.hint) banner.append(el("p", null, data.hint));
+        results.append(banner);
+      }
+      (data.entries || []).forEach((entry) => results.append(renderEntry(entry)));
+      if (data.also_defined_for && data.also_defined_for.length) {
+        const more = el("p", "status");
+        more.append("Also defined for ");
+        data.also_defined_for.forEach((make, index) => {
+          if (index) more.append(", ");
+          const button = el("button", "text-btn", make.label);
+          button.type = "button";
+          button.style.color = "var(--amber)";
+          button.style.background = "transparent";
+          button.style.border = "none";
+          button.style.padding = "0";
+          button.style.cursor = "pointer";
+          button.addEventListener("click", () => {
+            makeSelect.value = make.id;
+            runSearch(true);
+          });
+          more.append(button);
+        });
+        more.append(". Clear the make filter to see them in this list.");
+        results.append(more);
+      }
+      const count = (data.entries || []).length;
+      statusEl.textContent = count
+        ? count + " entr" + (count === 1 ? "y" : "ies") + " for " + data.normalised_code
+        : "No entry for " + (data.normalised_code || data.query);
+    }
+    function renderKeyword(data) {
+      results.replaceChildren();
+      const matches = data.matches || [];
+      if (!matches.length) {
+        results.append(el("p", "banner", data.message || "No matches."));
+        statusEl.textContent = "No matches.";
+        return;
+      }
+      const makeNote = data.make_label ? " for " + data.make_label + " and generic codes" : "";
+      statusEl.textContent = matches.length + " match" + (matches.length === 1 ? "" : "es") + makeNote + ". A star means causes or fixes are recorded.";
+      const list = el("ul", "match-list");
+      matches.forEach((match) => {
+        const item = el("li");
+        const button = el("button", "match");
+        button.type = "button";
+        button.append(el("code", null, (match.has_guidance ? "* " : "") + match.code));
+        const text = el("span");
+        text.append(el("span", null, match.description));
+        text.append(el("small", null, "  " + match.make_label + (match.original_language ? " · original language" : "")));
+        button.append(text);
+        button.addEventListener("click", () => {
+          qInput.value = match.code;
+          runSearch(true);
+        });
+        item.append(button);
+        list.append(item);
+      });
+      results.append(list);
+    }
+    async function loadMakes() {
+      const response = await fetch("/api/codes/makes");
+      if (!response.ok) return;
+      const data = await response.json();
+      const current = makeSelect.value;
+      makeSelect.replaceChildren(new Option("Any make", ""));
+      (data.makes || []).forEach((make) => {
+        const option = new Option(make.label, make.id);
+        option.dataset.aliases = (make.aliases || []).join("|");
+        makeSelect.append(option);
+      });
+      if (current) selectMake(current);
+    }
+    function selectMake(value) {
+      const wanted = (value || "").trim().toLowerCase();
+      if (!wanted) { makeSelect.value = ""; return; }
+      const options = [...makeSelect.options];
+      const direct = options.find((option) => option.value.toLowerCase() === wanted);
+      if (direct) { makeSelect.value = direct.value; return; }
+      const alias = options.find((option) => (option.dataset.aliases || "").split("|").includes(wanted));
+      makeSelect.value = alias ? alias.value : "";
+    }
+    async function runSearch(push) {
+      const q = qInput.value.trim();
+      const make = makeSelect.value;
+      if (!q) return;
+      const params = new URLSearchParams();
+      params.set("q", q);
+      if (make) params.set("make", make);
+      if (push) history.pushState(null, "", "/codes?" + params.toString());
+      statusEl.textContent = "Searching…";
+      results.replaceChildren();
+      const response = await fetch("/api/codes?" + params.toString());
+      if (!response.ok) {
+        statusEl.textContent = "Search failed.";
+        results.append(el("p", "banner", "The fault-code search did not complete."));
+        return;
+      }
+      const data = await response.json();
+      if (data.mode === "keyword") renderKeyword(data);
+      else renderCode(data);
+    }
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      runSearch(true);
+    });
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        qInput.value = chip.dataset.q;
+        selectMake(chip.dataset.make || "");
+        runSearch(true);
+      });
+    });
+    window.addEventListener("popstate", () => applyUrl(false));
+    function applyUrl() {
+      const params = new URLSearchParams(location.search);
+      qInput.value = params.get("q") || "";
+      selectMake(params.get("make") || "");
+      if (qInput.value) runSearch(false);
+    }
+    loadMakes().catch(function () {}).then(applyUrl);
+  </script>
+</body>
+</html>
