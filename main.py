@@ -1,9 +1,15 @@
+import json
+import logging
+import os
+import re
+import urllib.error
+import urllib.request
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from obd_codes.db import ensure_db, get_conn
 from obd_codes.lookup import extract_codes, makes_payload, search
@@ -12,6 +18,8 @@ from obd_codes.sources import ATTRIBUTION
 STATIC = Path(__file__).resolve().parent / "static"
 PAGE = STATIC / "codes.html"
 COST_NOTE = "Not priced in the fault-code sources"
+logger = logging.getLogger(__name__)
+_UK_REGISTRATION = re.compile(r"^[A-Z0-9]{1,8}$")
 
 
 @asynccontextmanager
@@ -289,4 +297,103 @@ async def diagnose(data: dict):
             {"title": "Technical guides", "snippet": "Standard diagnostic steps.", "type": "forum"}
         ]
     }
+
+
+def _normalise_registration(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    registration = re.sub(r"\s+", "", value).upper()
+    if not _UK_REGISTRATION.fullmatch(registration):
+        return None
+    return registration
+
+
+def _post_dvla(url: str, api_key: str, registration: str) -> tuple[int, str]:
+    payload = json.dumps({"registrationNumber": registration}).encode("utf-8")
+    request = urllib.request.Request(
+        url,
+        data=payload,
+        method="POST",
+        headers={
+            "x-api-key": api_key,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            raw = response.read()
+            return response.status, raw.decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        raw = exc.read()
+        text = raw.decode("utf-8", errors="replace") if raw else ""
+        return exc.code, text
+
+
+def _vehicle_from_dvla(registration: str, vehicle: dict) -> dict:
+    capacity = vehicle.get("engineCapacity")
+    return {
+        "registration": registration,
+        "make": vehicle.get("make"),
+        "model": vehicle.get("model"),
+        "year": vehicle.get("yearOfManufacture"),
+        "fuel": vehicle.get("fuelType"),
+        "engineSize": None if capacity is None else f"{capacity}cc",
+        "colour": vehicle.get("colour"),
+    }
+
+
+@app.post("/api/vehicle")
+def api_vehicle(data: dict):
+    registration = _normalise_registration(data.get("registration"))
+    if registration is None:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Please provide a valid UK registration."},
+        )
+
+    api_key = os.environ.get("DVLA_API_KEY")
+    if not api_key:
+        return JSONResponse(
+            status_code=500,
+            content={"error": "DVLA_API_KEY is not configured."},
+        )
+
+    url = os.environ.get(
+        "DVLA_API_URL",
+        "https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles",
+    )
+    try:
+        status, body = _post_dvla(url, api_key, registration)
+    except Exception:
+        logger.exception("DVLA vehicle lookup failed")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Vehicle lookup failed. Please try again."},
+        )
+
+    if status == 404:
+        return JSONResponse(status_code=404, content={"error": "Vehicle not found."})
+    if status < 200 or status >= 300:
+        logger.error("DVLA vehicle lookup failed status=%s body=%s", status, body)
+        return JSONResponse(
+            status_code=502,
+            content={"error": "Vehicle lookup failed. Please try again."},
+        )
+
+    try:
+        vehicle = json.loads(body) if body else {}
+    except json.JSONDecodeError:
+        logger.exception("DVLA vehicle lookup returned invalid JSON status=%s body=%s", status, body)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Vehicle lookup failed. Please try again."},
+        )
+    if not isinstance(vehicle, dict):
+        logger.error("DVLA vehicle lookup returned a non-object status=%s body=%s", status, body)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Vehicle lookup failed. Please try again."},
+        )
+    return _vehicle_from_dvla(registration, vehicle)
 
